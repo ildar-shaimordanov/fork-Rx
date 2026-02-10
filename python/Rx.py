@@ -23,6 +23,15 @@ class SchemaValueMismatch(SchemaMismatch):
 class SchemaRangeMismatch(SchemaMismatch):
   pass
 
+class SchemaRegexpMismatch(SchemaMismatch):
+  def __init__(self, name, value, regexp=re.compile(r'.*')):
+    SchemaMismatch.__init__(self, "{0} = '{1}' mismatch '{2}'".format(
+      name,
+      value,
+      regexp.pattern
+    ))
+
+
 def indent(text, level=1, whitespace='  '):
     return '\n'.join(whitespace*level+line for line in text.split('\n'))
 
@@ -82,6 +91,38 @@ class Util(object):
 
     return validate_range
 
+  # Let's support the most important flags only
+  re_flags = {
+    'i': re.IGNORECASE,
+    'm': re.MULTILINE,
+    's': re.DOTALL,
+    'u': re.UNICODE,
+    'x': re.VERBOSE,
+  }
+
+  @staticmethod
+  def make_regexp_validator(opt):
+    if not {'regexp', 'flags'}.issuperset(opt):
+      raise ValueError("illegal argument to make_regexp_validator")
+
+    opt_regexp = opt.get('regexp', '')
+    if opt_regexp is None or opt_regexp == '':
+      raise ValueError('Regexp expected')
+
+    opt_flags = opt.get('flags', '')
+    if not set(Util.re_flags).issuperset(opt_flags):
+      raise ValueError("Bad flag provided: " + opt_flags)
+
+    flags = 0
+    for c in list(opt_flags):
+      flags |= Util.re_flags[c]
+
+    try:
+      regexp = re.compile(opt_regexp, flags)
+    except:
+      raise ValueError('Bad regexp provided: ' + opt_regexp)
+
+    return regexp
 
 class Factory(object):
   def __init__(self, register_core_types=True):
@@ -532,7 +573,7 @@ class StrType(_CoreType):
   def subname(): return 'str'
 
   def __init__(self, schema, rx):
-    if not {'type', 'value', 'length'}.issuperset(schema):
+    if not {'type', 'value', 'length', 'match'}.issuperset(schema):
       raise SchemaError('unknown parameter for //str')
 
     self.value = None
@@ -545,6 +586,10 @@ class StrType(_CoreType):
     if 'length' in schema:
       self.length = Util.make_range_validator(schema['length'])
 
+    self.regexp = None
+    if 'match' in schema:
+      self.regexp = Util.make_regexp_validator(schema['match'])
+
   def validate(self, value, name='value'):
     if not isinstance(value, string_types):
       raise SchemaTypeMismatch(name, 'string')
@@ -552,6 +597,8 @@ class StrType(_CoreType):
       raise SchemaValueMismatch(name, '"{0}"'.format(self.value))
     if self.length:
       self.length(len(value), name+' length')
+    if self.regexp and not self.regexp.search(value):
+      raise SchemaRegexpMismatch(name, value, self.regexp)
 
 core_types = [
   AllType,  AnyType, ArrType, BoolType, DefType,
