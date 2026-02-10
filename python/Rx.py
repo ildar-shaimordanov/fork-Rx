@@ -6,22 +6,28 @@ from numbers import Number
 
 core_types = [ ]
 
+
 class SchemaError(Exception):
   pass
 
+
 class SchemaMismatch(Exception):
   pass
+
 
 class SchemaTypeMismatch(SchemaMismatch):
   def __init__(self, name, desired_type):
     SchemaMismatch.__init__(self, '{0} must be {1}'.format(name, desired_type))
 
+
 class SchemaValueMismatch(SchemaMismatch):
   def __init__(self, name, value):
     SchemaMismatch.__init__(self, '{0} must equal {1}'.format(name, value))
 
+
 class SchemaRangeMismatch(SchemaMismatch):
   pass
+
 
 class SchemaRegexpMismatch(SchemaMismatch):
   def __init__(self, name, value, regexp=re.compile(r'.*')):
@@ -34,6 +40,7 @@ class SchemaRegexpMismatch(SchemaMismatch):
 
 def indent(text, level=1, whitespace='  '):
     return '\n'.join(whitespace*level+line for line in text.split('\n'))
+
 
 class Util(object):
   @staticmethod
@@ -124,6 +131,7 @@ class Util(object):
 
     return regexp
 
+
 class Factory(object):
   def __init__(self, register_core_types=True):
     self.prefix_registry = {
@@ -199,6 +207,7 @@ class Factory(object):
     else:
       return type_class(schema, self)
 
+
 class _CoreType(object):
   @classmethod
   def uri(self):
@@ -217,6 +226,7 @@ class _CoreType(object):
 
   def validate(self, value, name='value'):
     raise SchemaMismatch('Tried to validate abstract base schema class')
+
 
 class AllType(_CoreType):
   @staticmethod
@@ -246,6 +256,7 @@ class AllType(_CoreType):
       raise SchemaMismatch(message)
     elif len(error_messages) == 1:
       raise SchemaMismatch(error_messages[0])
+
 
 class AnyType(_CoreType):
   @staticmethod
@@ -277,6 +288,7 @@ class AnyType(_CoreType):
       message = '{0} failed to meet any schema requirements:\n{1}'
       message = message.format(name, messages)
       raise SchemaMismatch(message)
+
 
 class ArrType(_CoreType):
   @staticmethod
@@ -319,6 +331,7 @@ class ArrType(_CoreType):
     elif len(error_messages) == 1:
       raise SchemaMismatch(name+': '+error_messages[0])
 
+
 class BoolType(_CoreType):
   @staticmethod
   def subname(): return 'bool'
@@ -326,6 +339,7 @@ class BoolType(_CoreType):
   def validate(self, value, name='value'):
     if not isinstance(value, bool):
       raise SchemaTypeMismatch(name, 'boolean')
+
 
 class DefType(_CoreType):
   @staticmethod
@@ -336,6 +350,7 @@ class DefType(_CoreType):
     if value is None:
       raise SchemaMismatch(name+' must be non-null')
 
+
 class FailType(_CoreType):
   @staticmethod
   def subname(): return 'fail'
@@ -344,6 +359,7 @@ class FailType(_CoreType):
 
   def validate(self, value, name='value'):
     raise SchemaMismatch(name+' is of fail type, automatically invalid.')
+
 
 class IntType(_CoreType):
   @staticmethod
@@ -372,6 +388,7 @@ class IntType(_CoreType):
 
     if self.value is not None and value != self.value:
       raise SchemaValueMismatch(name, self.value)
+
 
 class MapType(_CoreType):
   @staticmethod
@@ -408,6 +425,7 @@ class MapType(_CoreType):
     elif len(error_messages) == 1:
       raise SchemaMismatch(name+': '+error_messages[0])
 
+
 class NilType(_CoreType):
   @staticmethod
   def subname(): return 'nil'
@@ -417,6 +435,7 @@ class NilType(_CoreType):
   def validate(self, value, name='value'):
     if value is not None:
       raise SchemaTypeMismatch(name, 'null')
+
 
 class NumType(_CoreType):
   @staticmethod
@@ -447,6 +466,7 @@ class NumType(_CoreType):
     if self.value is not None and value != self.value:
       raise SchemaValueMismatch(name, self.value)
 
+
 class OneType(_CoreType):
   @staticmethod
   def subname(): return 'one'
@@ -454,6 +474,7 @@ class OneType(_CoreType):
   def validate(self, value, name='value'):
     if not isinstance(value, (Number, string_types)):
       raise SchemaTypeMismatch(name, 'number or string')
+
 
 class RecType(_CoreType):
   @staticmethod
@@ -568,6 +589,7 @@ class SeqType(_CoreType):
     if len(value) > len(self.content_schema):
       self.tail_schema.validate(value[len(self.content_schema):], name)
 
+
 class StrType(_CoreType):
   @staticmethod
   def subname(): return 'str'
@@ -599,6 +621,7 @@ class StrType(_CoreType):
       self.length(len(value), name+' length')
     if self.regexp and not self.regexp.search(value):
       raise SchemaRegexpMismatch(name, value, self.regexp)
+
 
 core_types = [
   AllType,  AnyType, ArrType, BoolType, DefType,
