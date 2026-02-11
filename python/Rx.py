@@ -116,7 +116,7 @@ class Util(object):
     if opt_regexp is None or opt_regexp == '':
       raise ValueError('Regexp expected')
 
-    opt_flags = opt.get('flags', '')
+    opt_flags = opt.get('flags') or ''
     if not set(Util.re_flags).issuperset(opt_flags):
       raise ValueError("Bad flag provided: " + opt_flags)
 
